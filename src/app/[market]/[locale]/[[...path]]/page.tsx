@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { isMarket, validContext, type Locale, type Market } from "@/lib/commerce";
 import { getCataloguePage, getProductBySlug, getBundles, getBundleBySlug, getCategories, getMarketConfig, searchCatalogue, type SearchSort } from "@/lib/catalogue";
@@ -9,9 +10,11 @@ import { CatalogueGrid } from "@/components/catalogue-grid";
 import { Purchase } from "@/components/purchase";
 import { Cart } from "@/components/cart";
 import { SearchBox } from "@/components/search-box";
+import { GuestCheckout } from "@/components/guest-checkout";
+import { GuestTracking, OrderConfirmation } from "@/components/guest-order-view";
 
 type Params = Promise<{ market: string; locale: string; path?: string[] }>;
-type Search = Promise<{ q?: string; page?: string; category?: string; color?: string; size?: string; minPrice?: string; maxPrice?: string; sort?: string }>;
+type Search = Promise<{ q?: string; page?: string; category?: string; color?: string; size?: string; minPrice?: string; maxPrice?: string; sort?: string; reference?: string; token?: string }>;
 function priceFilter(value: string | undefined) {
   if (!value) return undefined;
   if (!/^\d{1,12}(\.\d{1,2})?$/.test(value)) return null;
@@ -51,15 +54,17 @@ export default async function StorePage({ params, searchParams }: { params: Para
     content = <main className="inner-page"><div className="page-heading"><p className="eyebrow">MATA3 / {c.search}</p><h1>{c.results}</h1><SearchBox market={market} locale={locale} initialQuery={q} wide /></div>{result ? <CatalogueGrid result={result} market={market} locale={locale} filters={filters} /> : <div className="empty-state">{invalidFilters ? "Invalid price range" : "Search unavailable. Please try again."}</div>}</main>;
   } else if ((section === "product" || section === "bundle") && path.length === 2) {
     const product = section === "bundle" ? await getBundleBySlug(market, path[1]) : await getProductBySlug(market, path[1]); if (!product) notFound();
-    content = <main className="inner-page"><div className="breadcrumb"><Link href={base}>{c.departments}</Link> / {product.category ? <Link href={`${base}/category/${product.category}`}>{product.categoryLabel ?? categoryName(product.category, locale)}</Link> : null} / <span>{product.name}</span></div><div className="pdp-layout"><div className="pdp-media">{product.media.length ? product.media.map((media, i) => media.type === "VIDEO" ? <video key={i} src={media.url} controls preload="metadata" /> : <img key={i} src={media.url} alt={media.alt} loading={i ? "lazy" : "eager"} />) : <div className="pdp-placeholder" aria-label="Product media unavailable"><span>م</span><small>WEB PRODUCT MEDIA</small></div>}</div><Purchase product={product} market={market} locale={locale} /></div></main>;
+    content = <main className="inner-page"><div className="breadcrumb"><Link href={base}>{c.departments}</Link> / {product.category ? <Link href={`${base}/category/${product.category}`}>{product.categoryLabel ?? categoryName(product.category, locale)}</Link> : null} / <span>{product.name}</span></div><div className="pdp-layout"><div className="pdp-media">{product.media.length ? product.media.map((media, i) => media.type === "VIDEO" ? <video key={i} src={media.url} controls preload="metadata" /> : <Image unoptimized key={i} width={900} height={900} src={media.url} alt={media.alt} loading={i ? "lazy" : "eager"} />) : <div className="pdp-placeholder" aria-label="Product media unavailable"><span>م</span><small>WEB PRODUCT MEDIA</small></div>}</div><Purchase product={product} market={market} locale={locale} /></div></main>;
   } else if (section === "cart" && path.length === 1) {
     content = <main className="inner-page"><div className="page-heading"><p className="eyebrow">MATA3 / {c.cart}</p><h1>{c.cart}</h1></div><Cart key={market} market={market} locale={locale} /></main>;
   } else if (section === "checkout" && path.length === 1) {
-    content = <main className="inner-page"><div className="page-heading"><p className="eyebrow">MATA3 / {c.checkout}</p><h1>{c.checkout}</h1></div><div className="checkout-layout"><div className="checkout-steps"><section><span>01</span><h2>{c.contact}</h2><p>{locale === "ar" ? "يمكنك إتمام الطلب كضيف عندما تتوفر خدمة الطلبات." : "Guest checkout will be available when order creation is connected."}</p></section><section><span>02</span><h2>{c.address}</h2></section><section><span>03</span><h2>{c.delivery}</h2><p>{c.configure}</p></section><section><span>04</span><h2>{c.payment}</h2></section><section><span>05</span><h2>{c.review}</h2></section></div><aside className="summary-card"><p className="eyebrow">MATA3</p><h2>{c.checkout}</h2><p>{c.configure}</p><Link className="button outline" href={`${base}/cart`}>{c.cart} →</Link></aside></div></main>;
+    content = <GuestCheckout key={market} market={market} locale={locale} />;
+  } else if (section === "confirmation" && path.length === 1) {
+    content = <OrderConfirmation market={market} locale={locale} reference={queryParams.reference ?? ""} token={queryParams.token ?? ""} />;
   } else if (section === "track" && path.length === 1) {
-    content = <main className="narrow-page"><p className="eyebrow">MATA3 / {c.track}</p><h1>{c.track}</h1><p>{locale === "ar" ? "سيُتاح الاستعلام برقم الطلب ورقم الهاتف بعد ربط خدمة الطلبات." : "Order reference and phone verification will be available when the order service is connected."}</p><form className="stack-form"><label>Order reference<input disabled autoComplete="off" /></label><label>Phone<input disabled autoComplete="tel" /></label><button className="button gold" disabled>{c.track}</button></form></main>;
+    content = <GuestTracking market={market} locale={locale} />;
   } else if (section === "account" && path.length === 1) {
     content = <main className="narrow-page"><p className="eyebrow">MATA3 / {c.account}</p><h1>{c.account}</h1><div className="account-links"><span>{c.signIn}</span><span>{c.orders}</span><span>{c.profile}</span></div><p>{locale === "ar" ? "سيُتاح حساب العملاء عند ربط خدمة المصادقة المستقلة." : "Customer accounts will be available when the separate customer authentication service is connected."}</p></main>;
   } else notFound();
-  return <div className="site-shell" dir={locale === "ar" ? "rtl" : "ltr"} lang={locale}><Header market={market} locale={locale} categories={categories} />{content}<footer className="footer"><div><Link className="brand" href={base}>مَتاع <strong>MATA3</strong></Link><p>THE MODERN ARAB MERCHANT</p></div><nav><Link href={base}>{c.browse}</Link><Link href={`${base}/search`}>{c.search}</Link><Link href={`${base}/cart`}>{c.cart}</Link><Link href={`${base}/track`}>{c.track}</Link></nav><span>{marketName(market, locale)} · {marketConfig.currency}</span></footer></div>;
+  return <div className="site-shell" dir={locale === "ar" ? "rtl" : "ltr"} lang={locale}>{section === "checkout" || section === "confirmation" ? <header className="checkout-header"><Link className="brand" href={base}>مَتاع <strong>MATA3</strong></Link><Link href={base + "/cart"}>{c.cart}</Link></header> : <Header market={market} locale={locale} categories={categories} />}{content}<footer className="footer"><div><Link className="brand" href={base}>مَتاع <strong>MATA3</strong></Link><p>THE MODERN ARAB MERCHANT</p></div><nav><Link href={base}>{c.browse}</Link><Link href={`${base}/search`}>{c.search}</Link><Link href={`${base}/cart`}>{c.cart}</Link><Link href={`${base}/track`}>{c.track}</Link></nav><span>{marketName(market, locale)} · {marketConfig.currency}</span></footer></div>;
 }

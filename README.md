@@ -21,7 +21,7 @@ Copy `.env.example` to `.env.local` and set `MATA3_PUBLIC_API_BASE_URL` to the M
 - `src/components`: shared commerce and navigation UI.
 - `src/app/api/cart/validate`: alias for the authoritative cart quote route. It does not authorize checkout.
 
-The Commerce OS now provides the v1 customer-safe catalogue, WebProductMedia, exact offer IDs, market prices, and purchase eligibility. Checkout methods, authoritative order creation, restricted guest tracking, and separate customer authentication remain future work. Checkout cannot submit, tracking cannot disclose an order, and account access remains unavailable. No internal staff data or authentication is used here.
+The Commerce OS now provides the v1 customer-safe catalogue, WebProductMedia, exact offer IDs, market prices, and purchase eligibility. Guest checkout, authoritative order creation, protected confirmation, and restricted phone-verified tracking are implemented in v1.2C. Customer account access remains unavailable. No internal staff data or authentication is used here.
 
 The supplied Stitch HTML and images were used for visual composition only. Generated claims, operational details and imagery are not treated as product facts.
 
@@ -31,3 +31,8 @@ The supplied Stitch HTML and images were used for visual composition only. Gener
 Search pages request the System /api/public/v1/search list contract, preserving q, category, real variant color/size, price range, supported sort, and page in the URL. Suggestions come from the System product/category endpoint. Zero results and request failures have different states. Development fixtures are isolated to a missing API base URL outside production.
 
 The local cart stores market-separated opaque offer keys, quantities, and an optional previously observed unit amount. /api/cart/quote forwards these to System and displays canonical current prices and per-line validity. A changed price requires explicit acceptance and a new quote; unavailable or stale items are shown with stable reason codes. System remains authoritative. The quote never reserves inventory, submits checkout, or creates an order. Run npm run typecheck, npm run lint, npm test, and npm run build before release. The old /api/cart/validate path aliases the authoritative quote route.
+
+
+## v1.2C guest checkout
+
+The Store uses the System checkout configuration and quote endpoints. Delivery methods are absent until real market methods and rates are configured in System; checkout then stays unavailable. Approved payment concepts are labels only and do not imply gateway integrations. The checkout form collects normalized guest contact/address data and submits opaque offers and a UUID idempotency key. System calculates and stores all final amounts, deducts inventory atomically, and returns a short-lived confirmation capability. Store keeps that capability in tab session storage, outside the confirmation URL. Guest tracking requires public reference and the order phone. No account, courier, shipment, or payment gateway is created.
