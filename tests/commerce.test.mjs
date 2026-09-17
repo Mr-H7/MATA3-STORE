@@ -26,8 +26,8 @@ test("cart prices and market are authoritative", () => {
   assert.equal(result.subtotalMinor, 129800);
   assert.equal(validateCart([{ productId: product.id, variantId: "v", quantity: 2 }], [product], "ma").invalid.length, 1);
 });
-test("bundle availability follows components", () => {
-  const bundle = { ...fixtureCatalogue.find(p => p.kind === "bundle"), variants: [{ id: "v", label: "v", attributes: {}, available: true }] };
+test("bundle offer eligibility is supplied by System", () => {
+  const bundle = { ...fixtureCatalogue.find(p => p.kind === "bundle"), variants: [{ id: "v", label: "v", attributes: {}, available: false }] };
   const result = validateCart([{ productId: bundle.id, variantId: "v", quantity: 1 }], [bundle], "eg");
   assert.equal(result.valid.length, 0);
 });

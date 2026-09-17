@@ -1,2 +1,4 @@
 import { Gateway } from "@/components/gateway";
-export default function Entry() { return <Gateway />; }
+import { getAvailableMarkets } from "@/lib/catalogue";
+export const dynamic = "force-dynamic";
+export default async function Entry() { return <Gateway markets={await getAvailableMarkets()} />; }

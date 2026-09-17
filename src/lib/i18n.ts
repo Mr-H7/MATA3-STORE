@@ -13,5 +13,5 @@ const categoryCopy: Record<CategoryId, Record<Locale, string>> = {
   "womens-bags": { en: "Women's bags", ar: "حقائب النساء", fr: "Sacs femme" }
 };
 export function t(locale: Locale) { return copy[locale]; }
-export function categoryName(category: CategoryId, locale: Locale) { return categoryCopy[category][locale]; }
+export function categoryName(category: CategoryId, locale: Locale) { return categoryCopy[category]?.[locale] ?? category; }
 export function marketName(market: Market, locale: Locale) { return market === "eg" ? (locale === "ar" ? "مصر" : locale === "fr" ? "Égypte" : "Egypt") : (locale === "ar" ? "المغرب" : locale === "fr" ? "Maroc" : "Morocco"); }

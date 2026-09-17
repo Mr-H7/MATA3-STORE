@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCatalogue } from "@/lib/catalogue";
+import { getProductBySlug, getBundleBySlug } from "@/lib/catalogue";
 import { isMarket, validateCart, type CartLine } from "@/lib/commerce";
 
 export async function POST(request: NextRequest) {
@@ -11,8 +11,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
   try {
-    const catalogue = await getCatalogue(input.market);
+    const ids = [...new Set(input.lines.map(line => line.productId))];
+    const catalogue = (await Promise.all(ids.map(async id => await getProductBySlug(input.market as "eg" | "ma", id) ?? await getBundleBySlug(input.market as "eg" | "ma", id)))).filter((item): item is NonNullable<typeof item> => !!item);
     const result = validateCart(input.lines, catalogue, input.market);
-    return NextResponse.json({ currency: result.currency, subtotalMinor: result.subtotalMinor, lines: result.valid.map(item => ({ productId: item.product.id, variantId: item.variant.id, quantity: item.quantity, unitMinor: item.product.price.amountMinor, lineMinor: item.lineMinor })), invalid: result.invalid.map(item => ({ productId: item.line.productId, variantId: item.line.variantId, reason: item.reason })), checkoutAvailable: false });
+    return NextResponse.json({ currency: result.currency, subtotalMinor: result.subtotalMinor, lines: result.valid.map(item => ({ productId: item.product.id, slug: item.product.slug, kind: item.product.kind, name: item.product.name, variantId: item.variant.id, quantity: item.quantity, unitMinor: (item.variant.price ?? item.product.price).amountMinor, lineMinor: item.lineMinor })), invalid: result.invalid.map(item => ({ productId: item.line.productId, variantId: item.line.variantId, reason: item.reason })), checkoutAvailable: false });
   } catch { return NextResponse.json({ error: "Catalogue unavailable" }, { status: 503 }); }
 }

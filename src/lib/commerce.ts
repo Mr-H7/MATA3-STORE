@@ -1,11 +1,11 @@
 export type Market = "eg" | "ma";
 export type Locale = "ar" | "en" | "fr";
-export type CategoryId = "gaming" | "computer-accessories" | "mens-fashion" | "womens-fashion" | "womens-bags";
+export type CategoryId = string;
 export type Money = { amountMinor: number; currency: "EGP" | "MAD" };
 export type PublicMedia = { url: string; alt: string; type: "IMAGE" | "VIDEO" };
-export type PublicVariant = { id: string; label: string; available: boolean; attributes: Record<string, string>; media?: PublicMedia[] };
+export type PublicVariant = { id: string; label: string; available: boolean; attributes: Record<string, string>; price?: Money; media?: PublicMedia[] };
 export type PublicProduct = {
-  id: string; slug: string; name: string; category: CategoryId; market: Market;
+  id: string; slug: string; name: string; category: CategoryId; categoryLabel?: string; market: Market;
   publication: "PUBLISHED"; price: Money; media: PublicMedia[]; variants: PublicVariant[];
   kind: "product" | "bundle"; components?: { productId: string; quantity: number }[];
 };
@@ -31,10 +31,7 @@ export function validateCart(lines: CartLine[], catalogue: PublicProduct[], mark
     if (!product || !variant || !variant.available || !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 99) {
       invalid.push({ line, reason: "Item is unavailable or quantity is invalid" }); continue;
     }
-    if (product.kind === "bundle" && (!product.components?.length || product.components.some(c => !catalogue.some(p => p.id === c.productId && p.market === market && p.variants.some(v => v.available))))) {
-      invalid.push({ line, reason: "Bundle component is unavailable" }); continue;
-    }
-    valid.push({ product, variant, quantity: line.quantity, lineMinor: product.price.amountMinor * line.quantity });
+    valid.push({ product, variant, quantity: line.quantity, lineMinor: (variant.price ?? product.price).amountMinor * line.quantity });
   }
   return { valid, invalid, subtotalMinor: valid.reduce((sum, item) => sum + item.lineMinor, 0), currency: markets[market].currency };
 }

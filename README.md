@@ -9,9 +9,9 @@ npm install
 npm run dev
 ```
 
-Open `/` for the first entry gateway. The chosen context is remembered locally. During development, the isolated catalogue adapter displays only names and Egypt prices supplied in the implementation brief. Availability is unknown, so fixture purchase actions are disabled. Production returns no products until a customer-safe API is configured.
+Open `/` for the first entry gateway. The chosen context is remembered locally. During development, the isolated catalogue adapter displays only names and Egypt prices supplied in the implementation brief. Availability is unknown, so fixture purchase actions are disabled. Production requires the MATA3-SYSTEM public catalogue API and fails closed when its origin is not configured.
 
-Copy `.env.example` to `.env.local` and set `MATA3_PUBLIC_API_BASE_URL` once the Commerce OS storefront contract exists. The optional server token is never sent to the browser. Run `npm run typecheck`, `npm test`, and `npm run build` before release.
+Copy `.env.example` to `.env.local` and set `MATA3_PUBLIC_API_BASE_URL` to the MATA3-SYSTEM origin. Store calls the versioned public list, detail, category, market, and bundle routes server-side. Run `npm run typecheck`, `npm test`, and `npm run build` before release.
 
 ## Boundaries
 
@@ -21,6 +21,6 @@ Copy `.env.example` to `.env.local` and set `MATA3_PUBLIC_API_BASE_URL` once the
 - `src/components`: shared commerce and navigation UI.
 - `src/app/api/cart/validate`: server revalidation contract. It does not authorize checkout.
 
-The Commerce OS must provide dedicated customer-safe catalogue and web product media, exact variants and availability, market listings, checkout methods, authoritative order creation and frozen snapshots, restricted guest tracking, and separate customer authentication with order ownership checks. Until these exist, checkout cannot submit, tracking cannot disclose an order, and account access remains unavailable. No internal staff data or authentication is used here.
+The Commerce OS now provides the v1 customer-safe catalogue, WebProductMedia, exact offer IDs, market prices, and purchase eligibility. Checkout methods, authoritative order creation, restricted guest tracking, and separate customer authentication remain future work. Checkout cannot submit, tracking cannot disclose an order, and account access remains unavailable. No internal staff data or authentication is used here.
 
 The supplied Stitch HTML and images were used for visual composition only. Generated claims, operational details and imagery are not treated as product facts.
