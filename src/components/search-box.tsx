@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Locale, Market } from "@/lib/commerce";
 import { t } from "@/lib/i18n";
 type Suggestions = { products: { slug: string; name: string }[]; categories: { key: string; name: string }[] };
-export function SearchBox({ market, locale, initialQuery = "", wide = false }: { market: Market; locale: Locale; initialQuery?: string; wide?: boolean }) {
+export function SearchBox({ market, locale, initialQuery = "", wide = false, autoFocus = false }: { market: Market; locale: Locale; initialQuery?: string; wide?: boolean; autoFocus?: boolean }) {
   const [query, setQuery] = useState(initialQuery), [suggestions, setSuggestions] = useState<Suggestions | null>(null), [focused, setFocused] = useState(false), [failed, setFailed] = useState(false);
   const base = "/" + market + "/" + locale, copy = t(locale);
   useEffect(() => {
@@ -22,7 +22,7 @@ export function SearchBox({ market, locale, initialQuery = "", wide = false }: {
   const visible = focused && query.trim().length > 0 && query.length <= 100;
   return <div className={"search-box" + (wide ? " search-box-wide" : "")} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <form className={wide ? "wide-search" : "header-search"} action={base + "/search"}>
-      <input name="q" type="search" value={query} onChange={event => { setQuery(event.target.value); setSuggestions(null); setFailed(false); }} maxLength={100} placeholder={copy.search} aria-label={copy.search} autoComplete="off" />
+      <input autoFocus={autoFocus} name="q" type="search" value={query} onChange={event => { setQuery(event.target.value); setSuggestions(null); setFailed(false); }} maxLength={100} placeholder={copy.search} aria-label={copy.search} autoComplete="off" />
       <button aria-label={copy.search}>{wide ? copy.search + " ↗" : "⌕"}</button>
     </form>
     {visible && <div className="search-suggestions" aria-live="polite">
