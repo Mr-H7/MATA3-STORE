@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cartKey } from "./cart";
 import { formatMoney, normalizeStoredCart, type CartLine, type Locale, type Market, type PublicCartQuote } from "@/lib/commerce";
 type Destination = { key: string; parentKey: string | null; kind: "REGION" | "CITY" | "DISTRICT"; name: string };
@@ -17,7 +17,7 @@ export function GuestCheckout({ market, locale }: { market: Market; locale: Loca
   const [fields, setFields] = useState<Fields>(initial), [destinationKey, setDestinationKey] = useState(""), [deliveryCode, setDeliveryCode] = useState(""), [paymentCode, setPaymentCode] = useState("");
   const [checkoutQuote, setCheckoutQuote] = useState<CheckoutQuote | null>(null);
   const [error, setError] = useState(""), [loading, setLoading] = useState(true), [shippingState, setShippingState] = useState<"idle" | "loading" | "available" | "unavailable" | "failure">("idle"), [sending, setSending] = useState(false);
-  const label = (en: string, ar: string, fr: string) => locale === "ar" ? ar : locale === "fr" ? fr : en;
+  const label = useCallback((en: string, ar: string, fr: string) => locale === "ar" ? ar : locale === "fr" ? fr : en, [locale]);
   useEffect(() => {
     let cart: CartLine[] = [];
     try { cart = normalizeStoredCart(JSON.parse(localStorage.getItem(cartKey(market)) || "[]")); } catch { /* invalid saved cart */ }
@@ -27,9 +27,9 @@ export function GuestCheckout({ market, locale }: { market: Market; locale: Loca
       fetch("/api/checkout/config?market=" + market, { signal: controller.signal }).then(r => { if (!r.ok) throw Error(); return r.json() as Promise<Config>; }),
       cart.length ? fetch("/api/cart/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ market, lines: cart }), signal: controller.signal }).then(r => { if (!r.ok) throw Error(); return r.json() as Promise<PublicCartQuote>; }) : Promise.resolve(null),
     ]).then(([configuration, currentQuote]) => { if (!controller.signal.aborted) { setConfig(configuration); setQuote(currentQuote); setLoading(false); } })
-      .catch(() => { if (!controller.signal.aborted) { setError("Checkout configuration could not be loaded. Please try again."); setLoading(false); } });
+      .catch(() => { if (!controller.signal.aborted) { setError(label("Checkout configuration could not be loaded. Please try again.","تعذر تحميل إعدادات إتمام الطلب. حاول مجددًا.","Impossible de charger la configuration. Réessayez.")); setLoading(false); } });
     return () => controller.abort();
-  }, [market]);
+  }, [market, label]);
   useEffect(() => {
     if (!destinationKey) return;
     const controller = new AbortController();
@@ -67,11 +67,11 @@ export function GuestCheckout({ market, locale }: { market: Market; locale: Loca
     try {
       const latestResponse = await fetch("/api/checkout/quote", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ market, destinationKey, deliveryCode, lines }) });
-      if (!latestResponse.ok) { setShippingState(latestResponse.status === 409 ? "unavailable" : "failure"); setError("Delivery or checkout pricing needs review."); return; }
+      if (!latestResponse.ok) { setShippingState(latestResponse.status === 409 ? "unavailable" : "failure"); setError(label("Delivery or checkout pricing needs review.","تحتاج أسعار التوصيل أو الطلب إلى مراجعة.","Vérifiez la livraison et les prix.")); return; }
       const latest = await latestResponse.json() as CheckoutQuote;
       if (!latest.canProceed || latest.grandTotal.amountMinor !== checkoutQuote.grandTotal.amountMinor ||
         latest.itemsSubtotal.amountMinor !== checkoutQuote.itemsSubtotal.amountMinor) {
-        setCheckoutQuote(latest); setError("The current total changed. Review it before placing your order."); return;
+        setCheckoutQuote(latest); setError(label("The current total changed. Review it before placing your order.","تغير الإجمالي. راجعه قبل إرسال الطلب.","Le total a changé. Vérifiez-le avant de commander.")); return;
       }
       const payload = { market, lines, customer: { fullName: fields.fullName, phone: fields.phone, region, city, address: fields.address,
         ...(fields.email ? { email: fields.email } : {}), ...(fields.addressNotes ? { addressNotes: fields.addressNotes } : {}) },
@@ -85,21 +85,21 @@ export function GuestCheckout({ market, locale }: { market: Market; locale: Loca
         body: JSON.stringify({ ...payload, idempotencyKey: key }) });
       const value = await response.json() as { code?: string; order?: { reference: string }; confirmationToken?: string };
       if (!response.ok || !value.order || !value.confirmationToken) {
-        setError(value.code === "CART_CHANGED" || value.code === "OUT_OF_STOCK" ? "Your cart changed. Review its current prices and availability." :
-          value.code === "INVALID_INPUT" ? "Check your contact and address details." :
-          value.code === "CHECKOUT_UNAVAILABLE" ? "Delivery configuration changed. Select an available method again." : "Unable to place your order. Please try again.");
+        setError(value.code === "CART_CHANGED" || value.code === "OUT_OF_STOCK" ? label("Your cart changed. Review its current prices and availability.","تغيرت سلتك. راجع الأسعار والتوفر الحاليين.","Votre panier a changé. Vérifiez les prix et la disponibilité.") :
+          value.code === "INVALID_INPUT" ? label("Check your contact and address details.","راجع بيانات التواصل والعنوان.","Vérifiez vos coordonnées et votre adresse.") :
+          value.code === "CHECKOUT_UNAVAILABLE" ? label("Delivery configuration changed. Select an available method again.","تغيرت إعدادات التوصيل. اختر طريقة متاحة مجددًا.","La livraison a changé. Choisissez une méthode disponible.") : label("Unable to place your order. Please try again.","تعذر إرسال طلبك. حاول مجددًا.","Impossible de passer la commande. Réessayez."));
         if (value.code === "CHECKOUT_UNAVAILABLE") { setShippingState("unavailable"); setCheckoutQuote(null); }
         return;
       }
       localStorage.removeItem(cartKey(market)); sessionStorage.removeItem(storageKey);
       sessionStorage.setItem("mata3-confirm-" + value.order.reference, value.confirmationToken);
       window.location.assign(base + "/confirmation?reference=" + encodeURIComponent(value.order.reference));
-    } catch { setError("Unable to place your order. Please try again."); }
+    } catch { setError(label("Unable to place your order. Please try again.","تعذر إرسال طلبك. حاول مجددًا.","Impossible de passer la commande. Réessayez.")); }
     finally { setSending(false); }
   };
   return <main className="inner-page guest-checkout"><div className="page-heading"><p className="eyebrow">MATA3 / {label("GUEST CHECKOUT","إتمام الطلب كضيف","Commande invité")}</p><h1>{label("Checkout","إتمام الطلب","Commande")}</h1></div>
     {loading ? <div className="empty-state">{label("Checking checkout availability…","جارٍ التحقق من الإتمام…","Vérification de la commande…")}</div> :
-    !config ? <div className="empty-state" role="alert">{error}</div> :
+    !config ? <div className="empty-state" role="alert"><h2>{error}</h2><button type="button" className="button outline" onClick={() => window.location.reload()}>{label("Retry","إعادة المحاولة","Réessayer")}</button></div> :
     config.shippingStatus === "NOT_CONFIGURED" ? <div className="empty-state"><h2>{label("Checkout is not available for this market yet.","إتمام الطلب غير متاح لهذا السوق بعد.","La commande n'est pas encore disponible pour ce marché.")}</h2><p>{label("Delivery configuration must be approved first.","يجب اعتماد إعدادات التوصيل أولاً.","La livraison doit d'abord être configurée.")}</p><Link className="button outline" href={base + "/cart"}>{label("Return to cart","العودة إلى الحقيبة","Retour au panier")}</Link></div> :
     !quote?.canProceed ? <div className="empty-state"><h2>{label("Review your cart before checkout.","راجع حقيبتك قبل إتمام الطلب.","Vérifiez votre panier avant de commander.")}</h2><Link className="button gold" href={base + "/cart"}>{label("Review cart","مراجعة الحقيبة","Vérifier le panier")}</Link></div> :
     <form onSubmit={submit} className="guest-checkout-layout"><div className="checkout-steps">
