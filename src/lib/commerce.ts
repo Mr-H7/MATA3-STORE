@@ -5,9 +5,10 @@ export type Money = { amountMinor: number; currency: "EGP" | "MAD" };
 export type PublicMedia = { url: string; alt: string; type: "IMAGE" | "VIDEO" };
 export type PublicVariant = { id: string; label: string; available: boolean; attributes: Record<string, string>; price?: Money; media?: PublicMedia[] };
 export type PublicProduct = {
-  id: string; slug: string; name: string; category: CategoryId; categoryLabel?: string; market: Market;
+  id: string; slug: string; name: string; nameAr?: string; category: CategoryId; categoryLabel?: string; market: Market;
   publication: "PUBLISHED"; price: Money; media: PublicMedia[]; variants: PublicVariant[];
   kind: "product" | "bundle"; components?: { productId: string; quantity: number }[];
+  descriptionAr?: string; descriptionEn?: string;
 };
 export type CartLine = { key: string; quantity: number; observedUnitAmountMinor?: number };
 export type QuoteCode = "INVALID_KEY" | "INVALID_QUANTITY" | "WRONG_MARKET" | "NOT_PUBLIC" | "UNAVAILABLE" | "BUNDLE_UNAVAILABLE" | "INSUFFICIENT_STOCK" | "PRICE_CHANGED";

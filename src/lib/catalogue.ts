@@ -31,7 +31,8 @@ function productBase(value: RecordValue, market: Market) {
   const slug = string(value.slug, 120), name = string(value.nameEn) || string(value.nameAr) || string(value.name), price = money(value.price, market), cat = category(value.category);
   if (!slug || !/^[a-z0-9-]+$/.test(slug) || !name || !price || typeof value.purchasable !== "boolean") return null;
   const cover = media(value.cover);
-  return { id: slug, slug, name, category: cat?.key ?? "", categoryLabel: cat?.name, market, publication: "PUBLISHED" as const, price, media: cover ? [cover] : [] as PublicMedia[] };
+  const nameAr = string(value.nameAr);
+  return { id: slug, slug, name, ...(nameAr ? { nameAr } : {}), category: cat?.key ?? "", categoryLabel: cat?.name, market, publication: "PUBLISHED" as const, price, media: cover ? [cover] : [] as PublicMedia[] };
 }
 export function projectPublicProduct(value: unknown, market: Market): PublicProduct | null {
   const row = object(value);
@@ -51,7 +52,10 @@ export function projectPublicProductDetail(value: unknown, market: Market): Publ
     return [{ id, label: string(offer?.label) ?? "Standard", available: offer.purchasable, attributes, price, media: Array.isArray(offer.media) ? offer.media.map(media).filter((item): item is PublicMedia => !!item) : [] }];
   });
   if (!variants.length) return null;
-  return { ...base, kind: "product", media: row.media.map(media).filter((item): item is PublicMedia => !!item), variants };
+  return { ...base, kind: "product", media: row.media.map(media).filter((item): item is PublicMedia => !!item), variants,
+    ...(string(row.descriptionAr, 20000) ? { descriptionAr: string(row.descriptionAr, 20000)! } : {}),
+    ...(string(row.descriptionEn, 20000) ? { descriptionEn: string(row.descriptionEn, 20000)! } : {}),
+  };
 }
 export function projectPublicBundle(value: unknown, market: Market): PublicProduct | null {
   const row = object(value), base = row && productBase(row, market), offerId = string(row?.offerId, 100);
@@ -155,7 +159,7 @@ export async function searchCatalogue(market: Market, options: { q?: string; pag
   const price = priceRange && Number.isSafeInteger(priceRange.minAmountMinor) && Number.isSafeInteger(priceRange.maxAmountMinor) && priceRange.currency === expectedCurrency(market) ? { minAmountMinor: priceRange.minAmountMinor as number, maxAmountMinor: priceRange.maxAmountMinor as number, currency: expectedCurrency(market) } : null;
   return { items, page: body.page as number, pageSize: body.pageSize as number, total: body.total as number, sort: body.sort as SearchSort, supportedSorts: body.supportedSorts.filter((item): item is SearchSort => supportedSorts.includes(item as SearchSort)), facets: { categories, colors, sizes, price } };
 }
-export type SearchSuggestions = { products: { slug: string; name: string }[]; categories: CatalogueCategory[] };
+export type SearchSuggestions = { products: { slug: string; name: string; nameAr?: string }[]; categories: CatalogueCategory[] };
 export async function getSearchSuggestions(market: Market, q: string): Promise<SearchSuggestions> {
   if (!q.trim()) return { products: [], categories: [] };
   if (!process.env.MATA3_PUBLIC_API_BASE_URL) {
@@ -166,7 +170,7 @@ export async function getSearchSuggestions(market: Market, q: string): Promise<S
   const body = object(await fetchPublic("search/suggestions?" + params));
   if (!body || body.version !== 1 || body.market !== apiMarket(market) || !Array.isArray(body.products) || !Array.isArray(body.categories)) throw new Error("Invalid suggestions response");
   return {
-    products: body.products.map(object).filter((item): item is RecordValue => !!item && !!string(item.slug,120) && !!(string(item.nameEn) || string(item.nameAr))).map(item => ({ slug: item.slug as string, name: (string(item.nameEn) || string(item.nameAr))! })),
+    products: body.products.map(object).filter((item): item is RecordValue => !!item && !!string(item.slug,120) && !!(string(item.nameEn) || string(item.nameAr))).map(item => ({ slug: item.slug as string, name: (string(item.nameEn) || string(item.nameAr))!, ...(string(item.nameAr) ? { nameAr: string(item.nameAr)! } : {}) })),
     categories: body.categories.map(object).filter((item): item is RecordValue => !!item && !!string(item.key,100) && !!string(item.name)).map(item => ({ key: item.key as string, name: item.name as string, department: string(item.department) ?? "" })),
   };
 }

@@ -97,7 +97,7 @@ export function GuestCheckout({ market, locale }: { market: Market; locale: Loca
     } catch { setError(label("Unable to place your order. Please try again.","تعذر إرسال طلبك. حاول مجددًا.","Impossible de passer la commande. Réessayez.")); }
     finally { setSending(false); }
   };
-  return <main className="inner-page guest-checkout"><div className="page-heading"><p className="eyebrow">MATA3 / {label("GUEST CHECKOUT","إتمام الطلب كضيف","Commande invité")}</p><h1>{label("Checkout","إتمام الطلب","Commande")}</h1></div>
+  return <main id="main-content" className="inner-page guest-checkout"><div className="page-heading"><p className="eyebrow">MATA3 / {label("GUEST CHECKOUT","إتمام الطلب كضيف","Commande invité")}</p><h1>{label("Checkout","إتمام الطلب","Commande")}</h1></div>
     {loading ? <div className="empty-state">{label("Checking checkout availability…","جارٍ التحقق من الإتمام…","Vérification de la commande…")}</div> :
     !config ? <div className="empty-state" role="alert"><h2>{error}</h2><button type="button" className="button outline" onClick={() => window.location.reload()}>{label("Retry","إعادة المحاولة","Réessayer")}</button></div> :
     config.shippingStatus === "NOT_CONFIGURED" ? <div className="empty-state"><h2>{label("Checkout is not available for this market yet.","إتمام الطلب غير متاح لهذا السوق بعد.","La commande n'est pas encore disponible pour ce marché.")}</h2><p>{label("Delivery configuration must be approved first.","يجب اعتماد إعدادات التوصيل أولاً.","La livraison doit d'abord être configurée.")}</p><Link className="button outline" href={base + "/cart"}>{label("Return to cart","العودة إلى الحقيبة","Retour au panier")}</Link></div> :

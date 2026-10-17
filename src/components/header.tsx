@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { normalizeStoredCart, type Locale, type Market } from "@/lib/commerce";
 import { marketName, t } from "@/lib/i18n";
 import { SearchBox } from "./search-box";
+import { StoreDialog } from "./store-dialog";
+import { storefrontCopy } from "@/lib/storefront";
 
 type Category = { key: string; name: string };
 export function BrandLogo() {
@@ -18,11 +20,10 @@ function Icon({ name }: { name: "search" | "cart" | "menu" | "close" }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg>;
 }
 export function Header({ market, locale, categories }: { market: Market; locale: Locale; categories: Category[] }) {
-  const path = usePathname(), router = useRouter(), base = "/" + market + "/" + locale, copy = t(locale);
+  const path = usePathname(), router = useRouter(), base = "/" + market + "/" + locale, copy = t(locale), ui = storefrontCopy(locale);
   const [menu, setMenu] = useState(false), [search, setSearch] = useState(false), [scrolled, setScrolled] = useState(false);
   useEffect(() => { setMenu(false); setSearch(false); }, [path]);
   useEffect(() => { const onScroll = () => setScrolled(window.scrollY > 24); onScroll(); window.addEventListener("scroll", onScroll, { passive: true }); return () => window.removeEventListener("scroll", onScroll); }, []);
-  useEffect(() => { if (!menu && !search) return; const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setMenu(false); setSearch(false); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [menu, search]);
   const change = (nextMarket: Market, nextLocale: Locale) => {
     if (nextMarket !== market) {
       let count = 0;
@@ -31,28 +32,33 @@ export function Header({ market, locale, categories }: { market: Market; locale:
     }
     const next = "/" + nextMarket + "/" + nextLocale;
     localStorage.setItem("mata3-context", next);
-    router.push(nextMarket === market ? path.replace(/^\/(eg|ma)\/(ar|en|fr)/, next) : next);
+    router.push(nextMarket === market ? path.replace(/^\/(eg|ma)\/(ar|en|fr)/, next) + window.location.search : next);
     setMenu(false);
   };
   const marketControl = <label className="header-select"><span className="sr-only">{copy.country}</span><select aria-label={copy.country} value={market} onChange={event => change(event.target.value as Market, locale === "fr" && event.target.value === "eg" ? "ar" : locale)}><option value="eg">{marketName("eg", locale)} · EGP</option><option value="ma">{marketName("ma", locale)} · MAD</option></select></label>;
   const languageControl = <label className="header-select"><span className="sr-only">{copy.language}</span><select aria-label={copy.language} value={locale} onChange={event => change(market, event.target.value as Locale)}><option value="ar">العربية</option><option value="en">English</option>{market === "ma" && <option value="fr">Français</option>}</select></label>;
   return <>
-    <header className={"site-header" + (scrolled ? " is-scrolled" : "")}>
-      <Link className="brand" href={base} aria-label="MATA3 home"><BrandLogo/></Link>
-      <nav className="desktop-nav" aria-label={locale === "ar" ? "التنقل الرئيسي" : "Main navigation"}>
-        <Link href={base}>{locale === "ar" ? "الرئيسية" : locale === "fr" ? "Accueil" : "Home"}</Link>
-        <Link href={base + "/search"}>{locale === "ar" ? "تسوق" : locale === "fr" ? "Boutique" : "Shop"}</Link>
-        <Link href={base + "/search#categories"}>{copy.departments}</Link>
-        <Link href={base + "/about"}>{locale === "ar" ? "عن مَتاع" : "About MATA3"}</Link>
-      </nav>
-      <div className="header-actions">
-        <button className="header-icon" type="button" aria-label={copy.search} aria-expanded={search} onClick={() => setSearch(true)}><Icon name="search"/><span className="desktop-only">{copy.search}</span></button>
-        <div className="desktop-only header-context">{marketControl}{languageControl}</div>
-        <Link className="header-icon" href={base + "/cart"} aria-label={copy.cart}><Icon name="cart"/><span className="desktop-only">{copy.cart}</span></Link>
-        <button className="header-icon mobile-only" type="button" aria-label={locale === "ar" ? "افتح القائمة" : "Open menu"} aria-expanded={menu} onClick={() => setMenu(true)}><Icon name="menu"/></button>
+    <header className={"site-header commerce-masthead" + (scrolled ? " is-scrolled" : "")}>
+      <div className="masthead-main">
+        <Link className="brand" href={base} aria-label="MATA3 home"><BrandLogo/></Link>
+        <p className="masthead-position desktop-only">{locale === "ar" ? "التاجر العربي المعاصر" : "THE MODERN ARAB MERCHANT"}</p>
+        <div className="header-actions">
+          <button className="header-icon" type="button" aria-label={copy.search} aria-expanded={search} onClick={() => setSearch(true)}><Icon name="search"/><span className="desktop-only">{copy.search}</span></button>
+          <div className="desktop-only header-context">{marketControl}{languageControl}</div>
+          <Link className="header-icon" href={base + "/cart"} aria-label={copy.cart}><Icon name="cart"/><span className="desktop-only">{copy.cart}</span></Link>
+          <button className="header-icon mobile-only" type="button" aria-label={locale === "ar" ? "افتح القائمة" : "Open menu"} aria-expanded={menu} onClick={() => setMenu(true)}><Icon name="menu"/></button>
+        </div>
       </div>
+      <nav className="desktop-nav" aria-label={locale === "ar" ? "التنقل الرئيسي" : "Main navigation"}>
+        <Link href={base} aria-current={path === base ? "page" : undefined}>{locale === "ar" ? "الرئيسية" : locale === "fr" ? "Accueil" : "Home"}</Link>
+        <Link href={base + "/search"} aria-current={/\/(search|category|product|bundle)(\/|$)/.test(path) ? "page" : undefined}>{locale === "ar" ? "تسوق" : locale === "fr" ? "Boutique" : "Shop"}</Link>
+        {categories.map(category => <Link key={category.key} href={base + "/category/" + category.key}>{category.name}</Link>)}
+        <Link href={base + "/about"} aria-current={path.endsWith("/about") ? "page" : undefined}>{locale === "ar" ? "عن مَتاع" : locale === "fr" ? "À propos" : "About MATA3"}</Link>
+        <Link href={base + "/track"} aria-current={path.endsWith("/track") ? "page" : undefined}>{copy.track}</Link>
+      </nav>
+      <div className="mobile-market-line"><span>{marketName(market, locale)} / {market === "eg" ? "EGP" : "MAD"}</span><Link href={base + "/search"}>{locale === "ar" ? "تسوق المنتجات" : locale === "fr" ? "Voir les produits" : "Shop products"}<span aria-hidden="true">↗</span></Link></div>
     </header>
-    {search && <div className="search-overlay" role="dialog" aria-modal="true" aria-label={copy.search} onMouseDown={event => { if (event.target === event.currentTarget) setSearch(false); }}><div className="search-overlay-panel"><div className="search-overlay-head"><span className="eyebrow">MATA3 / {copy.search}</span><button className="header-icon" type="button" aria-label={locale === "ar" ? "إغلاق البحث" : "Close search"} onClick={() => setSearch(false)}><Icon name="close"/></button></div><SearchBox market={market} locale={locale} wide autoFocus/><Link className="search-all" href={base + "/search"} onClick={() => setSearch(false)}>{locale === "ar" ? "تصفح جميع المنتجات" : locale === "fr" ? "Voir le catalogue" : "Explore all products"} ↗</Link></div></div>}
-    {menu && <div className="menu-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setMenu(false); }}><aside className="mobile-menu" role="dialog" aria-modal="true" aria-label={locale === "ar" ? "القائمة" : "Menu"}><div className="menu-head"><BrandLogo/><button className="header-icon" type="button" autoFocus aria-label={locale === "ar" ? "إغلاق القائمة" : "Close menu"} onClick={() => setMenu(false)}><Icon name="close"/></button></div><nav><Link href={base}>{locale === "ar" ? "الرئيسية" : locale === "fr" ? "Accueil" : "Home"}</Link><Link href={base + "/search"}>{locale === "ar" ? "تسوق" : locale === "fr" ? "Boutique" : "Shop"}</Link>{categories.map(category => <Link key={category.key} href={base + "/category/" + category.key}>{category.name}</Link>)}<Link href={base + "/about"}>{locale === "ar" ? "عن مَتاع" : "About MATA3"}</Link><Link href={base + "/track"}>{copy.track}</Link></nav><div className="menu-selects">{marketControl}{languageControl}</div></aside></div>}
+    {search && <StoreDialog label={copy.search} className="search-dialog" initialFocus="input[type=search]" onClose={() => setSearch(false)}><div className="dialog-heading"><div><p className="eyebrow">MATA3</p><h2>{copy.search}</h2></div><button className="header-icon" type="button" aria-label={ui.close + " · " + copy.search} onClick={() => setSearch(false)}><Icon name="close"/></button></div><SearchBox market={market} locale={locale} wide/><Link className="search-all" href={base + "/search"} onClick={() => setSearch(false)}>{ui.allProducts} ↗</Link></StoreDialog>}
+    {menu && <StoreDialog label={ui.menu} className="navigation-dialog" onClose={() => setMenu(false)}><div className="mobile-menu"><div className="menu-head"><BrandLogo/><button className="header-icon" type="button" aria-label={ui.close + " · " + ui.menu} onClick={() => setMenu(false)}><Icon name="close"/></button></div><nav><Link href={base} aria-current={path === base ? "page" : undefined}>{locale === "ar" ? "الرئيسية" : locale === "fr" ? "Accueil" : "Home"}</Link><Link href={base + "/search"} aria-current={path.includes("/search") ? "page" : undefined}>{locale === "ar" ? "تسوق" : locale === "fr" ? "Boutique" : "Shop"}</Link>{categories.map(category => <Link key={category.key} href={base + "/category/" + category.key}>{category.name}</Link>)}<Link href={base + "/about"}>{locale === "ar" ? "عن مَتاع" : locale === "fr" ? "À propos" : "About MATA3"}</Link><Link href={base + "/track"}>{copy.track}</Link></nav><div className="menu-selects">{marketControl}{languageControl}</div></div></StoreDialog>}
   </>;
 }
