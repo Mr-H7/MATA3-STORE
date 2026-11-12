@@ -3,12 +3,13 @@ export type Locale = "ar" | "en" | "fr";
 export type CategoryId = string;
 export type Money = { amountMinor: number; currency: "EGP" | "MAD" };
 export type PublicMedia = { url: string; alt: string; type: "IMAGE" | "VIDEO" };
-export type PublicVariant = { id: string; label: string; available: boolean; attributes: Record<string, string>; price?: Money; media?: PublicMedia[] };
+export type PublicFulfillment = "OWNED_STOCK" | "SUPPLIER_ON_DEMAND";
+export type PublicVariant = { id: string; label: string; available: boolean; attributes: Record<string, string>; price?: Money; media?: PublicMedia[]; fulfillment?: PublicFulfillment; maxPerOrder?: number };
 export type PublicProduct = {
   id: string; slug: string; name: string; nameAr?: string; category: CategoryId; categoryLabel?: string; market: Market;
   publication: "PUBLISHED"; price: Money; media: PublicMedia[]; variants: PublicVariant[];
   kind: "product" | "bundle"; components?: { productId: string; quantity: number }[];
-  descriptionAr?: string; descriptionEn?: string;
+  descriptionAr?: string; descriptionEn?: string; fulfillment?: PublicFulfillment;
 };
 export type CartLine = { key: string; quantity: number; observedUnitAmountMinor?: number };
 export type QuoteCode = "INVALID_KEY" | "INVALID_QUANTITY" | "WRONG_MARKET" | "NOT_PUBLIC" | "UNAVAILABLE" | "BUNDLE_UNAVAILABLE" | "INSUFFICIENT_STOCK" | "PRICE_CHANGED";

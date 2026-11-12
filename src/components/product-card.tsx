@@ -22,7 +22,7 @@ export function ProductCard({ product, market, locale }: { product: PublicProduc
       {product.category && <span className="overline">{product.categoryLabel ?? categoryName(product.category, locale)}</span>}
       <h3 dir="auto">{name}</h3>
       <strong className="product-price">{formatMoney(product.price, locale)}</strong>
-      <p className={`product-eligibility${available ? " is-available" : ""}`}><span aria-hidden="true"/>{available ? copy.available : copy.unavailable}</p>
+      <p className={`product-eligibility${available ? " is-available" : ""}`}><span aria-hidden="true"/>{available && product.fulfillment === "SUPPLIER_ON_DEMAND" ? copy.suppliedToOrder : available ? copy.available : copy.unavailable}</p>
     </div>
     </Link>
   </article>;

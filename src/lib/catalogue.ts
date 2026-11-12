@@ -32,7 +32,8 @@ function productBase(value: RecordValue, market: Market) {
   if (!slug || !/^[a-z0-9-]+$/.test(slug) || !name || !price || typeof value.purchasable !== "boolean") return null;
   const cover = media(value.cover);
   const nameAr = string(value.nameAr);
-  return { id: slug, slug, name, ...(nameAr ? { nameAr } : {}), category: cat?.key ?? "", categoryLabel: cat?.name, market, publication: "PUBLISHED" as const, price, media: cover ? [cover] : [] as PublicMedia[] };
+  const fulfillment = value.fulfillment === "SUPPLIER_ON_DEMAND" ? "SUPPLIER_ON_DEMAND" as const : undefined;
+  return { id: slug, slug, name, ...(nameAr ? { nameAr } : {}), category: cat?.key ?? "", categoryLabel: cat?.name, market, publication: "PUBLISHED" as const, price, media: cover ? [cover] : [] as PublicMedia[], ...(fulfillment ? { fulfillment } : {}) };
 }
 export function projectPublicProduct(value: unknown, market: Market): PublicProduct | null {
   const row = object(value);
@@ -49,7 +50,9 @@ export function projectPublicProductDetail(value: unknown, market: Market): Publ
     if (!id || !price || typeof offer?.purchasable !== "boolean") return [];
     const attributes: Record<string, string> = {};
     for (const [key, value] of Object.entries(rawAttributes ?? {})) if (typeof value === "string" && value.length <= 100) attributes[key] = value;
-    return [{ id, label: string(offer?.label) ?? "Standard", available: offer.purchasable, attributes, price, media: Array.isArray(offer.media) ? offer.media.map(media).filter((item): item is PublicMedia => !!item) : [] }];
+    const fulfillment = offer.fulfillment === "SUPPLIER_ON_DEMAND" ? "SUPPLIER_ON_DEMAND" as const : offer.fulfillment === "OWNED_STOCK" ? "OWNED_STOCK" as const : undefined;
+    const maxPerOrder = Number.isInteger(offer.maxPerOrder) && (offer.maxPerOrder as number) >= 1 && (offer.maxPerOrder as number) <= 99 ? offer.maxPerOrder as number : undefined;
+    return [{ id, label: string(offer?.label) ?? "Standard", available: offer.purchasable, attributes, price, media: Array.isArray(offer.media) ? offer.media.map(media).filter((item): item is PublicMedia => !!item) : [], ...(fulfillment ? { fulfillment } : {}), ...(maxPerOrder ? { maxPerOrder } : {}) }];
   });
   if (!variants.length) return null;
   return { ...base, kind: "product", media: row.media.map(media).filter((item): item is PublicMedia => !!item), variants,
